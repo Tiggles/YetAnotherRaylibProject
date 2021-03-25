@@ -96,19 +96,19 @@ int main() {
             );
             Vector2 mouse = GetMousePosition(); 
             Vector2 pointerPosition = GetScreenToWorld2D(mouse, camera);
-            DrawCircle(pointerPosition.x, pointerPosition.y, 10, RED);
+            DrawCircle(mouse.x, mouse.y, 10, RED);
 
             DrawFPS(10, 10);
 
             DrawRectangle(screenWidth * 0.75f, 0, screenWidth / 4 , 30, WHITE);
             if (message.timeRemaining > 0) {
-                DrawText(message.message, pointerPosition.x, pointerPosition.y, 16, RED);
+                DrawText(message.message, mouse.x, mouse.y, 16, RED);
             }
             char buff[10];
             DrawText("Wrappers: ", 2, 2, 20, WHITE);
             DrawText(itoa(wrappersAmount, buff, 10), 108, 2, 20, WHITE);
-            DrawText(itoa(mouse.x, buff, 10), 10, 25, 20, WHITE);
-            DrawText(itoa(mouse.y, buff, 10), 10, 40, 20, WHITE);
+            DrawText(itoa(pointerPosition.x, buff, 10), 10, 25, 20, WHITE);
+            DrawText(itoa(pointerPosition.y, buff, 10), 10, 40, 20, WHITE);
         );
     }
     CloseWindow(); // Close window and OpenGL context
@@ -124,8 +124,8 @@ void render() {
 }
 
 void input(Camera2D *camera, float delta, Message *message, HouseWrapper *housesWrapper, int houseWidth, int houseHeight) {
-    Vector2 mouse = GetMousePosition();
     SetMouseOffset(camera->offset.x, camera->offset.y);
+    Vector2 mouse = GetMousePosition();
 
     Vector2 pointerPosition = GetScreenToWorld2D(mouse, *camera);
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -141,19 +141,19 @@ void input(Camera2D *camera, float delta, Message *message, HouseWrapper *houses
     int scrollSpeed = IsKeyDown(KEY_LEFT_SHIFT) ? 250 : 150;
 
     if (IsKeyDown(KEY_W)) {
-        camera->offset.y += delta * scrollSpeed;
+        camera->target.y -= delta * scrollSpeed;
     } else if (IsKeyDown(KEY_S)) {
-        camera->offset.y -= delta * scrollSpeed;
+        camera->target.y += delta * scrollSpeed;
     }
 
     if (IsKeyDown(KEY_A)) {
-        camera->offset.x += delta * scrollSpeed;
+        camera->target.x -= delta * scrollSpeed;
     } else if (IsKeyDown(KEY_D)) {
-        camera->offset.x -= delta * scrollSpeed;
+        camera->target.x += delta * scrollSpeed;
     }
         
     if (IsKeyPressed(KEY_R)) {
-        camera->offset.x = camera->offset.y = 0;
+        camera->target.x = camera->target.y = 0;
         camera->zoom = 1;
     }
 
