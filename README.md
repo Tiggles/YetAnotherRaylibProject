@@ -3,7 +3,7 @@
 ### Features!
 
 - Place buildings with the click of a mouse! (Left mouse button)
-- Zoom in and out using your mouse wheel! (Breaks mouse position!)
+- Zoom in and out using your mouse wheel! (Breaks mouse position! Can invert rendering!)
 - Use WASD to scroll around!
 - Reset scrolling AND zoom all at once, using the "R" key!
 - Quit pressing the "Escape" key!
