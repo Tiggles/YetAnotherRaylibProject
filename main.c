@@ -1,7 +1,7 @@
 #include "raylib.h"
 #include <stdlib.h>
 
-#define MODE_2D(BLOCK) BeginMode2D(camera);\
+#define MODE_2D(BLOCK) BeginMode2D(*camera);\
     BLOCK \
 EndMode2D();
 
@@ -41,7 +41,8 @@ void drawHouses(HouseWrapper *housesWrapper, Vector2 cameraPosition, Texture2D *
 void addHouse(HouseWrapper *housesWrapper, Vector2 position);
 void input(Camera2D *camera, float delta, Message *message, HouseWrapper *housesWrapper, int houseWidth, int houseHeight);
 void update(Message *message, float delta);
-void render(void);
+void render(Camera2D *camera, Texture2D *houseTexture, HouseWrapper *housesWrapper, Message *message);
+void freeHouseWrappers(HouseWrapper *housesWrapper);
 
 int wrappersAmount = 0;
 int screenWidth = 800;
@@ -86,41 +87,57 @@ int main() {
         float delta = GetFrameTime();
         input(&camera, delta, &message, &housesWrapper, houseWidth, houseHeight);
         update(&message, delta);
-        DRAW(
-
-            ClearBackground((Color){70, 149, 75});
-            render();
-
-            MODE_2D(
-                drawHouses(&housesWrapper, camera.offset, &house);
-            );
-            Vector2 mouse = GetMousePosition(); 
-            Vector2 pointerPosition = GetScreenToWorld2D(mouse, camera);
-            DrawCircle(mouse.x, mouse.y, 10, RED);
-
-            DrawFPS(10, 10);
-
-            DrawRectangle(screenWidth * 0.75f, 0, screenWidth / 4 , 30, WHITE);
-            if (message.timeRemaining > 0) {
-                DrawText(message.message, mouse.x, mouse.y, 16, RED);
-            }
-            char buff[10];
-            DrawText("Wrappers: ", 2, 2, 20, WHITE);
-            DrawText(itoa(wrappersAmount, buff, 10), 108, 2, 20, WHITE);
-            DrawText(itoa(pointerPosition.x, buff, 10), 10, 25, 20, WHITE);
-            DrawText(itoa(pointerPosition.y, buff, 10), 10, 40, 20, WHITE);
-        );
+        render(&camera, &house, &housesWrapper, &message);
     }
-    CloseWindow(); // Close window and OpenGL context
+    freeHouseWrappers(&housesWrapper);
+    CloseWindow();
     return 0;
+}
+
+int freeCount = 0;
+void freeHouseWrappers(HouseWrapper *housesWrapper) {
+    free(housesWrapper->houses);
+    freeCount++;
+    HouseWrapper *wrapper = housesWrapper->next;
+
+    while (wrapper != NULL) {
+        free(wrapper->houses);
+        HouseWrapper *next = wrapper->next;
+        free(wrapper);
+        wrapper = next;
+        freeCount++;
+    }
+
+    printf("Freed %i wrappers and arrays of houses.\n", freeCount);
 }
 
 void update(Message *message, float delta) {
     if (message->timeRemaining > 0) message->timeRemaining -= delta;
 }
 
-void render() {
+void render(Camera2D *camera, Texture2D *houseTexture, HouseWrapper *housesWrapper, Message *message) {
+    DRAW(
+        ClearBackground((Color){70, 149, 75});
 
+        MODE_2D(
+            drawHouses(housesWrapper, (Vector2){0, 0}, houseTexture);
+        );
+        Vector2 mouse = GetMousePosition(); 
+        Vector2 pointerPosition = GetScreenToWorld2D(mouse, *camera);
+        DrawCircle(mouse.x, mouse.y, 10, RED);
+
+        DrawFPS(10, 10);
+
+        DrawRectangle(screenWidth * 0.75f, 0, screenWidth / 4 , 30, WHITE);
+        if (message->timeRemaining > 0) {
+            DrawText(message->message, mouse.x, mouse.y, 16, RED);
+        }
+        char buff[10];
+        DrawText("Wrappers: ", 2, 2, 20, WHITE);
+        DrawText(itoa(wrappersAmount, buff, 10), 108, 2, 20, WHITE);
+        DrawText(itoa(pointerPosition.x, buff, 10), 10, 25, 20, WHITE);
+        DrawText(itoa(pointerPosition.y, buff, 10), 10, 40, 20, WHITE);
+    );
 }
 
 void input(Camera2D *camera, float delta, Message *message, HouseWrapper *housesWrapper, int houseWidth, int houseHeight) {
