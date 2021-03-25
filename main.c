@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #define MODE_2D(BLOCK) BeginMode2D(*camera);\
     BLOCK \
@@ -132,11 +133,11 @@ void render(Camera2D *camera, Texture2D *houseTexture, HouseWrapper *housesWrapp
         if (message->timeRemaining > 0) {
             DrawText(message->message, mouse.x, mouse.y, 16, RED);
         }
-        char buff[10];
-        DrawText("Wrappers: ", 2, 2, 20, WHITE);
-        DrawText(itoa(wrappersAmount, buff, 10), 108, 2, 20, WHITE);
-        DrawText(itoa(pointerPosition.x, buff, 10), 10, 25, 20, WHITE);
-        DrawText(itoa(pointerPosition.y, buff, 10), 10, 40, 20, WHITE);
+        char buff[256];
+        sprintf(buff, "Wrappers: %i", wrappersAmount);
+        DrawText(buff, 2, 2, 20, WHITE);
+        sprintf(buff, "%f, %f", pointerPosition.x, pointerPosition.y);
+        DrawText(buff, 10, 25, 20, WHITE);
     );
 }
 
