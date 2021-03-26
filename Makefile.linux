@@ -1,0 +1,16 @@
+CC=tcc
+CFLAGS=-std=c99 -vv -Wall -Wextra -O2
+
+RAYLIB_DIR=$(shell pwd)/raylib/linux-x86_64
+LDFLAGS=-lraylib -Wl,-rpath=${RAYLIB_DIR}/lib -I${RAYLIB_DIR}/include -L${RAYLIB_DIR}/lib
+
+TARGET?=game
+SOURCES=main.c
+
+all: ${TARGET}
+	
+${TARGET}: ${SOURCES} ${HEADERS}
+	${CC} ${CFLAGS} -o $@ $^ ${LDFLAGS}
+
+clean:
+	$(RM) ${TARGET} *.o
