@@ -10,6 +10,12 @@ EndMode2D();
     BLOCK \
 EndDrawing();
 
+
+typedef struct Textures {
+    Texture2D house;
+    Texture2D sawmill;
+} Textures;
+
 typedef struct Resources {
     int gold; 
     int wood;
@@ -42,12 +48,13 @@ void drawHouses(HouseWrapper *housesWrapper, Vector2 cameraPosition, Texture2D *
 void addHouse(HouseWrapper *housesWrapper, Vector2 position);
 void input(Camera2D *camera, float delta, Message *message, HouseWrapper *housesWrapper, int houseWidth, int houseHeight);
 void update(Message *message, float delta);
-void render(Camera2D *camera, Texture2D *houseTexture, HouseWrapper *housesWrapper, Message *message);
+void render(Camera2D *camera, Textures *textures, HouseWrapper *housesWrapper, Message *message);
 void freeHouseWrappers(HouseWrapper *housesWrapper);
 
 int wrappersAmount = 0;
 int screenWidth = 800;
 int screenHeight = 450;
+int debug = 0;
 
 int main() {
     // Initialization
@@ -75,9 +82,10 @@ int main() {
 
     for (int i = 0; i < HOUSES_PER_WRAPPER; i++) housesWrapper.houses[i] = NULL;
 
-    Texture2D house = LoadTexture("Assets/house.png");
-    int houseHeight = house.height / 4;
-    int houseWidth = house.width / 4;
+    Textures textures;
+    textures.house = LoadTexture("Assets/house.png");
+    int houseHeight = textures.house.height / 4;
+    int houseWidth = textures.house.width / 4;
 
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
@@ -88,7 +96,7 @@ int main() {
         float delta = GetFrameTime();
         input(&camera, delta, &message, &housesWrapper, houseWidth, houseHeight);
         update(&message, delta);
-        render(&camera, &house, &housesWrapper, &message);
+        render(&camera, &textures, &housesWrapper, &message);
     }
     freeHouseWrappers(&housesWrapper);
     CloseWindow();
@@ -116,12 +124,12 @@ void update(Message *message, float delta) {
     if (message->timeRemaining > 0) message->timeRemaining -= delta;
 }
 
-void render(Camera2D *camera, Texture2D *houseTexture, HouseWrapper *housesWrapper, Message *message) {
+void render(Camera2D *camera, Textures *textures, HouseWrapper *housesWrapper, Message *message) {
     DRAW(
         ClearBackground((Color){70, 149, 75});
 
         MODE_2D(
-            drawHouses(housesWrapper, (Vector2){0, 0}, houseTexture);
+            drawHouses(housesWrapper, (Vector2){0, 0}, &textures->house);
         );
         Vector2 mouse = GetMousePosition(); 
         Vector2 pointerPosition = GetScreenToWorld2D(mouse, *camera);
@@ -173,6 +181,10 @@ void input(Camera2D *camera, float delta, Message *message, HouseWrapper *houses
     if (IsKeyPressed(KEY_R)) {
         camera->target.x = camera->target.y = 0;
         camera->zoom = 1;
+    }
+
+    if (IsKeyPressed(KEY_F1)) {
+        debug = !debug;
     }
 
     float mouseWheel = GetMouseWheelMove();
