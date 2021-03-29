@@ -2,6 +2,42 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+
+typedef struct QuadNode {
+    float x;
+    float y;
+    float width;
+    float height;
+    struct QuadNode *parent;
+    struct QuadNode *ne;
+    struct QuadNode *nw;
+    struct QuadNode *sw;
+    struct QuadNode *se;
+    // Add type?
+    void** data;
+} QuadNode;
+
+QuadNode* initChildNode(QuadNode *parent, float x, float y) {
+    QuadNode *node = node;
+    node->parent = parent;
+    node->ne = node->nw = node->se = node->sw = NULL;
+    node->data = NULL;
+    node->height = parent->height / 2.f;
+    node->width = parent->width / 2.f;
+    node->x = x;
+    return node;
+}
+void makeSubdivision(QuadNode *node) {
+    node->nw = initChildNode(node, node->x, node->y);
+    node->ne = initChildNode(node, node->x + node->width / 2, node->y);
+    node->sw = initChildNode(node, node->x, node->y + node->height / 2);
+    node->se = initChildNode(node, node->x + node->width / 2, node->y + node->height / 2);
+}
+bool isLeaf(QuadNode *node) {
+    // Any child node being null means every node is. For now.
+    return node->ne == NULL;
+}
+
 #define MODE_2D(BLOCK) BeginMode2D(*camera);\
     BLOCK \
 EndMode2D();
@@ -29,10 +65,10 @@ typedef struct Resources {
 typedef struct Building {
     int x;
     int y;
-    union buildingData {
+    union {
         int inhabitants;
         int workers;
-    };
+    } buildingData;
     enum BuildingType type;
     int repairState;
 } Building;
@@ -227,7 +263,17 @@ inline Building* initBuilding(int x, int y, enum BuildingType type) {
     building->y = y;
     building->type = type;
     building->repairState = 100;
-    
+    switch (type)
+    {
+    case House:
+        building->buildingData.inhabitants = 0;
+        break;
+    case Lumbermill:
+        building->buildingData.workers = 0;
+    default:
+        break;
+    }
+    building->buildingData.inhabitants = 0;
     return building;
 }
 
@@ -280,6 +326,8 @@ void drawBuildings(BuildingWrapper *housesWrapper, Vector2 cameraPosition, Textu
                     case Lumbermill:
                         DrawTextureEx(textures->lumbermill, (Vector2){wrapper->buildings[i]->x, wrapper->buildings[i]->y}, 0, 0.25, WHITE);  
                     default:
+                        DrawRectangle(wrapper->buildings[i]->x, wrapper->buildings[i]->y, 24, 24, WHITE);
+                        DrawText("???", wrapper->buildings[i]->x, wrapper->buildings[i]->y, 20, BLACK);
                         break;
                     }
                 }
