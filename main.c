@@ -38,6 +38,18 @@ bool isLeaf(QuadNode *node) {
     return node->ne == NULL;
 }
 
+void drawQuadTree(QuadNode *node, char dir[4]) {
+    if (isLeaf(node)) {
+        DrawRectangleLines(node->x, node->y, node->width, node->height, RED);
+        DrawText(dir, node->x + 5, node->y + 4, 10, RED);
+    } else {
+        drawQuadTree(node->nw, "NW");
+        drawQuadTree(node->ne, "NE");
+        drawQuadTree(node->sw, "SW");
+        drawQuadTree(node->se, "SE");
+    }
+}
+
 #define MODE_2D(BLOCK) BeginMode2D(*camera);\
     BLOCK \
 EndMode2D();
@@ -92,7 +104,7 @@ void drawBuildings(BuildingWrapper *housesWrapper, Vector2 cameraPosition, Textu
 void addBuilding(BuildingWrapper *housesWrapper, Vector2 position, enum BuildingType type);
 void input(Camera2D *camera, float delta, Message *message, BuildingWrapper *housesWrapper, int houseWidth, int houseHeight, enum BuildingType *type);
 void update(Message *message, float delta);
-void render(Camera2D *camera, Textures *textures, BuildingWrapper *housesWrapper, Message *message, enum BuildingType type);
+void render(Camera2D *camera, Textures *textures, BuildingWrapper *housesWrapper, Message *message, enum BuildingType type, QuadNode *root);
 void freeHouseWrappers(BuildingWrapper *housesWrapper);
 
 int wrappersAmount = 0;
@@ -105,6 +117,19 @@ int main() {
     //--------------------------------------------------------------------------------------
 
     enum BuildingType buildingType = House;
+
+    QuadNode tree = {
+        -screenWidth,
+        -screenHeight,
+        screenWidth * 2,
+        screenWidth * 2,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    };
 
     InitWindow(screenWidth, screenHeight, "raylib");
 
@@ -142,7 +167,7 @@ int main() {
         float delta = GetFrameTime();
         input(&camera, delta, &message, &buildingsWrapper, houseWidth, houseHeight, &buildingType);
         update(&message, delta);
-        render(&camera, &textures, &buildingsWrapper, &message, buildingType);
+        render(&camera, &textures, &buildingsWrapper, &message, buildingType, &tree);
     }
     freeHouseWrappers(&buildingsWrapper);
     CloseWindow();
@@ -170,30 +195,35 @@ void update(Message *message, float delta) {
     if (message->timeRemaining > 0) message->timeRemaining -= delta;
 }
 
-void render(Camera2D *camera, Textures *textures, BuildingWrapper *housesWrapper, Message *message, enum BuildingType type) {
+void render(Camera2D *camera, Textures *textures, BuildingWrapper *housesWrapper, Message *message, enum BuildingType type, QuadNode *root) {
     DRAW(
         ClearBackground((Color){70, 149, 75});
 
         MODE_2D(
             drawBuildings(housesWrapper, (Vector2){0, 0}, textures);
+            if (debug) {
+                drawQuadTree(root, "ROOT");
+            }
         );
         Vector2 mouse = GetMousePosition(); 
         Vector2 pointerPosition = GetScreenToWorld2D(mouse, *camera);
         DrawCircle(mouse.x, mouse.y, 10, RED);
 
-        DrawFPS(10, 10);
 
         DrawRectangle(screenWidth * 0.75f, 0, screenWidth / 4 , 30, WHITE);
         if (message->timeRemaining > 0) {
             DrawText(message->message, mouse.x, mouse.y, 16, RED);
         }
-        char buff[256];
-        sprintf(buff, "Wrappers: %i", wrappersAmount);
-        DrawText(buff, 2, 2, 20, WHITE);
-        sprintf(buff, "%f, %f", pointerPosition.x, pointerPosition.y);
-        DrawText(buff, 10, 25, 20, WHITE);
-        sprintf(buff, "Type: %i", type);
-        DrawText(buff, 10, 40, 20, WHITE);
+        if (debug) {
+            char buff[256];
+            DrawFPS(10, 10);
+            sprintf(buff, "Wrappers: %i", wrappersAmount);
+            DrawText(buff, 2, 2, 20, WHITE);
+            sprintf(buff, "%f, %f", pointerPosition.x, pointerPosition.y);
+            DrawText(buff, 10, 25, 20, WHITE);
+            sprintf(buff, "Type: %i", type);
+            DrawText(buff, 10, 40, 20, WHITE);
+        }
     );
 }
 
@@ -213,17 +243,19 @@ void input(Camera2D *camera, float delta, Message *message, BuildingWrapper *bui
 
 
     int scrollSpeed = IsKeyDown(KEY_LEFT_SHIFT) ? 250 : 150;
+    float invertedZoomScale = 1 / camera->zoom;
+
 
     if (IsKeyDown(KEY_W)) {
-        camera->target.y -= delta * scrollSpeed;
+        camera->target.y -= delta * scrollSpeed  * invertedZoomScale;
     } else if (IsKeyDown(KEY_S)) {
-        camera->target.y += delta * scrollSpeed;
+        camera->target.y += delta * scrollSpeed  * invertedZoomScale;
     }
 
     if (IsKeyDown(KEY_A)) {
-        camera->target.x -= delta * scrollSpeed;
+        camera->target.x -= delta * scrollSpeed * invertedZoomScale;
     } else if (IsKeyDown(KEY_D)) {
-        camera->target.x += delta * scrollSpeed;
+        camera->target.x += delta * scrollSpeed * invertedZoomScale;
     }
         
     if (IsKeyPressed(KEY_R)) {
@@ -254,6 +286,8 @@ void input(Camera2D *camera, float delta, Message *message, BuildingWrapper *bui
 
     float mouseWheel = GetMouseWheelMove();
     camera->zoom += mouseWheel / 10;
+    if (camera->zoom > 3.f) camera->zoom = 3;
+    else if (camera->zoom < 0.1f) camera->zoom = 0.1f;
 }
 
 
