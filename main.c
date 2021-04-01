@@ -2,12 +2,34 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// TO HANDLE FORWARD DECLARATION
+enum BuildingType {
+    House,
+    Lumbermill
+};
 
+enum Quadrant {
+    NW,
+    NE,
+    SW,
+    SE
+};
+
+typedef struct Building {
+    int x;
+    int y;
+    union {
+        int inhabitants;
+        int workers;
+    } buildingData;
+    enum BuildingType type;
+    int repairState;
+} Building;
+// FORWARD DECLARATION
+
+#define MAX_QUAD_NODE_CAPACITY 4
 typedef struct QuadNode {
-    float x;
-    float y;
-    float width;
-    float height;
+    Rectangle *coords;
     struct QuadNode *parent;
     struct QuadNode *ne;
     struct QuadNode *nw;
@@ -18,21 +40,99 @@ typedef struct QuadNode {
 } QuadNode;
 
 QuadNode* initChildNode(QuadNode *parent, float x, float y) {
-    QuadNode *node = node;
+    QuadNode *node = malloc(sizeof(QuadNode));
+    node->coords = malloc(sizeof(Rectangle));
     node->parent = parent;
     node->ne = node->nw = node->se = node->sw = NULL;
     node->data = NULL;
-    node->height = parent->height / 2.f;
-    node->width = parent->width / 2.f;
-    node->x = x;
+    node->coords->height = parent->coords->height / 2.f;
+    node->coords->width = parent->coords->width / 2.f;
+    node->coords->x = x;
+    node->coords->y = y;
+    node->data = malloc(sizeof(void*) * MAX_QUAD_NODE_CAPACITY);
+    for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
+        node->data[i] = NULL;
+    }
     return node;
 }
-void makeSubdivision(QuadNode *node) {
-    node->nw = initChildNode(node, node->x, node->y);
-    node->ne = initChildNode(node, node->x + node->width / 2, node->y);
-    node->sw = initChildNode(node, node->x, node->y + node->height / 2);
-    node->se = initChildNode(node, node->x + node->width / 2, node->y + node->height / 2);
+
+void makeNewParent(QuadNode *node, Vector2 target) {
+    QuadNode *parent = malloc(sizeof(QuadNode));
+    
+    bool isLeft = node->coords->x > target.x;
+    bool isAbove = node->coords->y > target.y;
+
+    float x = isLeft ? node->coords->x - node->coords->width : node->coords->x + node->coords->width;
+    float y = isAbove ? node->coords->y - node->coords->height : node->coords->y + node->coords->height;
+
+    parent->coords = malloc(sizeof(Rectangle));
+    parent->coords->width = node->coords->width * 2;
+    parent->coords->height = node->coords->height * 2;
+    parent->coords->x = x;
+    parent->coords->y = y;
+    parent->data = malloc(sizeof(void*) * MAX_QUAD_NODE_CAPACITY);
+
+    /* WRONG  */
+    bool nw = !isLeft && !isAbove;
+    bool ne = !isLeft && isAbove;
+    bool sw = isLeft && isAbove;
+    bool se = !isLeft && !isAbove;
+
+    if (nw) printf("NW\n");
+    if (ne) printf("NE\n");
+    if (sw) printf("SW\n");
+    if (se) printf("SE\n");
+
+    if (nw) parent->nw = node;
+    else parent->nw = initChildNode(parent, parent->coords->x, parent->coords->y);
+
+    if (ne) parent->ne = node;
+    else parent->ne = initChildNode(parent, parent->coords->x + parent->coords->width / 2, parent->coords->y);
+        
+    if (sw) parent->sw = node;
+    else parent->sw = initChildNode(parent, parent->coords->x, parent->coords->y + parent->coords->height / 2);
+        
+    if (se) parent->se = node;
+    else parent->se = initChildNode(parent, parent->coords->x + parent->coords->width / 2, parent->coords->y + parent->coords->height / 2);
+    
+    // if (!CheckCollisionPointRec(target, *parent->coords)) {
+    //     printf("Attempt make new parent make new parent\n");
+    //     makeNewParent(parent, target);
+    // }
 }
+
+void makeSubdivision(QuadNode *node) {
+    node->nw = initChildNode(node, node->coords->x, node->coords->y);
+    node->ne = initChildNode(node, node->coords->x + node->coords->width / 2, node->coords->y);
+    node->sw = initChildNode(node, node->coords->x, node->coords->y + node->coords->height / 2);
+    node->se = initChildNode(node, node->coords->x + node->coords->width / 2, node->coords->y + node->coords->height / 2);
+    int nw = 0, ne = 0, sw = 0, se = 0;
+    for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
+        struct Building *b = node->data[i];
+        if (b == NULL) return;
+        // if buildings y position is greater or equal to south nodes
+        if (b->y >= node->sw->coords->y) {
+            // if bulding is on the right side
+            if (b->x >= node->se->coords->x) {
+                printf("se");
+                node->se->data[se++] = b;
+            } else {
+                printf("sw");
+                node->sw->data[sw++] = b;
+            }
+        } else {
+            // Node is in upper two quadrants
+            if (b->x >= node->ne->coords->x) {
+                printf("ne");
+                node->se->data[ne++] = b;
+            } else {
+                printf("sw");
+                node->sw->data[nw++] = b;
+            }
+        }
+    }
+}
+
 bool isLeaf(QuadNode *node) {
     // Any child node being null means every node is. For now.
     return node->ne == NULL;
@@ -40,8 +140,19 @@ bool isLeaf(QuadNode *node) {
 
 void drawQuadTree(QuadNode *node, char dir[4]) {
     if (isLeaf(node)) {
-        DrawRectangleLines(node->x, node->y, node->width, node->height, RED);
-        DrawText(dir, node->x + 5, node->y + 4, 10, RED);
+        int count = 0;
+        for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
+            if (node->data[i] != NULL) {
+                count++;
+            } else {
+                break;
+            }
+        }
+        DrawRectangleLines(node->coords->x, node->coords->y, node->coords->width, node->coords->height, RED);
+        DrawText(dir, node->coords->x + 5, node->coords->y + 4, 10, RED);
+        char buff[10];
+        sprintf(buff, "%i", count);
+        DrawText(buff, node->coords->x + 40, node->coords->y + 4, 10, RED);
     } else {
         drawQuadTree(node->nw, "NW");
         drawQuadTree(node->ne, "NE");
@@ -58,11 +169,6 @@ EndMode2D();
     BLOCK \
 EndDrawing();
 
-enum BuildingType {
-    House,
-    Lumbermill
-};
-
 typedef struct Textures {
     Texture2D house;
     Texture2D lumbermill;
@@ -73,17 +179,6 @@ typedef struct Resources {
     int wood;
     int electricity;
 } Resources;
-
-typedef struct Building {
-    int x;
-    int y;
-    union {
-        int inhabitants;
-        int workers;
-    } buildingData;
-    enum BuildingType type;
-    int repairState;
-} Building;
 
 typedef struct Message {
     char *message;
@@ -99,12 +194,11 @@ typedef struct BuildingWrapper {
 
 Building* initBuilding(int x, int y, enum BuildingType type);
 bool isRectangleColliding(Rectangle rect1, Rectangle rect2);
-BuildingWrapper* isAnyColliding(BuildingWrapper *housesWrapper,  Vector2 point, int houseWidth, int houseHeight);
-void drawBuildings(BuildingWrapper *housesWrapper, Vector2 cameraPosition, Textures *textures);
-void addBuilding(BuildingWrapper *housesWrapper, Vector2 position, enum BuildingType type);
-void input(Camera2D *camera, float delta, Message *message, BuildingWrapper *housesWrapper, int houseWidth, int houseHeight, enum BuildingType *type);
+void drawBuildings(QuadNode *root, Vector2 cameraPosition, Textures *textures);
+bool addBuilding(QuadNode *root, Vector2 position, enum BuildingType type);
+void input(Camera2D *camera, float delta, Message *message, QuadNode *root, int houseWidth, int houseHeight, enum BuildingType *type);
 void update(Message *message, float delta);
-void render(Camera2D *camera, Textures *textures, BuildingWrapper *housesWrapper, Message *message, enum BuildingType type, QuadNode *root);
+void render(Camera2D *camera, Textures *textures, QuadNode *root, Message *message, enum BuildingType type);
 void freeHouseWrappers(BuildingWrapper *housesWrapper);
 
 int wrappersAmount = 0;
@@ -113,23 +207,25 @@ int screenHeight = 450;
 int debug = 0;
 
 int main() {
-    // Initialization
-    //--------------------------------------------------------------------------------------
-
     enum BuildingType buildingType = House;
 
     QuadNode tree = {
-        -screenWidth,
-        -screenHeight,
-        screenWidth * 2,
-        screenWidth * 2,
+        malloc(sizeof(Rectangle)),
         NULL,
         NULL,
         NULL,
         NULL,
         NULL,
-        NULL
+        malloc(sizeof(Building) * MAX_QUAD_NODE_CAPACITY)
     };
+
+    tree.coords->x = screenWidth / 2.0f;
+    tree.coords->y = screenHeight / 2.0f;
+    tree.coords->width = screenWidth / 2.0f;
+    tree.coords->height = screenHeight / 2.0f;
+    for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
+        tree.data[i] = NULL;
+    }
 
     InitWindow(screenWidth, screenHeight, "raylib");
 
@@ -143,15 +239,6 @@ int main() {
     camera.target = (Vector2){0, 0};
     camera.zoom = 1;
 
-    BuildingWrapper buildingsWrapper;
-    buildingsWrapper.next = NULL;
-    buildingsWrapper.coordinates.x = buildingsWrapper.coordinates.y = 0;
-    buildingsWrapper.coordinates.width = screenWidth;
-    buildingsWrapper.coordinates.height = screenHeight;
-    buildingsWrapper.buildings = malloc(sizeof(Building*) *HOUSES_PER_WRAPPER); // TODO free
-
-    for (int i = 0; i < HOUSES_PER_WRAPPER; i++) buildingsWrapper.buildings[i] = NULL;
-
     Textures textures;
     textures.house = LoadTexture("Assets/house.png");
     textures.lumbermill = LoadTexture("Assets/lumbermill_outline.png");
@@ -160,47 +247,26 @@ int main() {
 
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
-    int x = 0;
-    int y = 0;
-
     while (!WindowShouldClose()) {
         float delta = GetFrameTime();
-        input(&camera, delta, &message, &buildingsWrapper, houseWidth, houseHeight, &buildingType);
+        input(&camera, delta, &message, &tree, houseWidth, houseHeight, &buildingType);
         update(&message, delta);
-        render(&camera, &textures, &buildingsWrapper, &message, buildingType, &tree);
+        render(&camera, &textures, &tree, &message, buildingType);
     }
-    freeHouseWrappers(&buildingsWrapper);
     CloseWindow();
     return 0;
-}
-
-int freeCount = 0;
-void freeHouseWrappers(BuildingWrapper *buildingsWrapper) {
-    free(buildingsWrapper->buildings);
-    freeCount++;
-    BuildingWrapper *wrapper = buildingsWrapper->next;
-
-    while (wrapper != NULL) {
-        free(wrapper->buildings);
-        BuildingWrapper *next = wrapper->next;
-        free(wrapper);
-        wrapper = next;
-        freeCount++;
-    }
-
-    printf("Freed %i wrappers and arrays of houses.\n", freeCount);
 }
 
 void update(Message *message, float delta) {
     if (message->timeRemaining > 0) message->timeRemaining -= delta;
 }
 
-void render(Camera2D *camera, Textures *textures, BuildingWrapper *housesWrapper, Message *message, enum BuildingType type, QuadNode *root) {
+void render(Camera2D *camera, Textures *textures, QuadNode *root, Message *message, enum BuildingType type) {
     DRAW(
         ClearBackground((Color){70, 149, 75});
 
         MODE_2D(
-            drawBuildings(housesWrapper, (Vector2){0, 0}, textures);
+            drawBuildings(root, (Vector2){0, 0}, textures);
             if (debug) {
                 drawQuadTree(root, "ROOT");
             }
@@ -227,15 +293,14 @@ void render(Camera2D *camera, Textures *textures, BuildingWrapper *housesWrapper
     );
 }
 
-void input(Camera2D *camera, float delta, Message *message, BuildingWrapper *buildingWrapper, int houseWidth, int houseHeight, enum BuildingType *type) {
+void input(Camera2D *camera, float delta, Message *message, QuadNode *root, int houseWidth, int houseHeight, enum BuildingType *type) {
     SetMouseOffset(camera->offset.x, camera->offset.y);
     Vector2 mouse = GetMousePosition();
 
     Vector2 pointerPosition = GetScreenToWorld2D(mouse, *camera);
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        if (!isAnyColliding(buildingWrapper, pointerPosition, houseWidth, houseHeight)) {
-            addBuilding(buildingWrapper, pointerPosition, *type);
-        } else {
+        bool added = addBuilding(root, pointerPosition, *type);
+        if (!added) {
             message->message = "Cannot place building. Collides with other house.";
             message->timeRemaining = 5;
         }
@@ -297,81 +362,90 @@ inline Building* initBuilding(int x, int y, enum BuildingType type) {
     building->y = y;
     building->type = type;
     building->repairState = 100;
-    switch (type)
-    {
-    case House:
-        building->buildingData.inhabitants = 0;
-        break;
-    case Lumbermill:
-        building->buildingData.workers = 0;
-    default:
-        break;
+    switch (type) {
+        case House:
+            building->buildingData.inhabitants = 0;
+            break;
+        case Lumbermill:
+            building->buildingData.workers = 0;
+        default:
+            break;
     }
-    building->buildingData.inhabitants = 0;
     return building;
 }
 
-void addBuilding(BuildingWrapper *housesWrapper, Vector2 position, enum BuildingType type) {
-    int emptySlot = -1;
-    BuildingWrapper *wrapper = housesWrapper;
-    while (wrapper != NULL) {
-        if (CheckCollisionPointRec(position, wrapper->coordinates)) {
-            for (int i = 0; i < HOUSES_PER_WRAPPER; i++) {
-                if (wrapper->buildings[i] == NULL) {
-                    wrapper->buildings[i] = initBuilding(position.x, position.y, type);
-                    return;
-                }
-            } 
-        }
+enum Quadrant findQuadrant(QuadNode *node, Vector2 pos) {
+    return SE;
+    double middleX = node->coords->x + node->coords->width / 2;
+    double middleY = node->coords->y + node->coords->height / 2; 
 
-        if (wrapper->next == NULL) {            
-            wrapper->next = malloc(sizeof(BuildingWrapper));
-            wrapper = wrapper->next;
-            wrapper->next = NULL;
-            wrapper->coordinates.x = housesWrapper->coordinates.x; // TODO
-            wrapper->coordinates.y = housesWrapper->coordinates.y; // TODO
-            wrapper->coordinates.width = housesWrapper->coordinates.width; // TODO
-            wrapper->coordinates.height = housesWrapper->coordinates.height; // TODO
-            wrapper->buildings = malloc(sizeof(Building*) * HOUSES_PER_WRAPPER);
-            for (int i = 1; i < HOUSES_PER_WRAPPER; i++) wrapper->buildings[i] = NULL;
-            wrapper->buildings[0] = initBuilding(position.x, position.y, type);
-            return;
-        }
+    bool isNorth = middleY > pos.y;
+    bool isWest = middleX < pos.x;
 
-        wrapper = wrapper->next;
-    };
-}
-
-void drawBuildings(BuildingWrapper *housesWrapper, Vector2 cameraPosition, Textures *textures) {
-    BuildingWrapper *wrapper = housesWrapper;
-    wrappersAmount = 0;
-    while (wrapper != NULL) {
-        if (CheckCollisionRecs(
-            (Rectangle) {wrapper->coordinates.x, wrapper->coordinates.y, wrapper->coordinates.width, wrapper->coordinates.width},
-            (Rectangle) {cameraPosition.x, cameraPosition.y, wrapper->coordinates.width, wrapper->coordinates.width}
-        )) {
-            for (int i = 0; i < HOUSES_PER_WRAPPER; i++) {
-                if (wrapper->buildings[i] != NULL){
-                    switch (wrapper->buildings[i]->type)
-                    {
-                    case House:
-                        DrawTextureEx(textures->house, (Vector2){wrapper->buildings[i]->x, wrapper->buildings[i]->y}, 0, 0.25, WHITE);  
-                        break;
-                    case Lumbermill:
-                        DrawTextureEx(textures->lumbermill, (Vector2){wrapper->buildings[i]->x, wrapper->buildings[i]->y}, 0, 0.25, WHITE);  
-                    default:
-                        DrawRectangle(wrapper->buildings[i]->x, wrapper->buildings[i]->y, 24, 24, WHITE);
-                        DrawText("???", wrapper->buildings[i]->x, wrapper->buildings[i]->y, 20, BLACK);
-                        break;
-                    }
-                }
-            }
-        }
-        wrapper = wrapper->next;
-        wrappersAmount++;
+    if (isNorth) {
+        return isWest ? NW : NE;
+    } else {
+        return isWest ? SW : SE;
     }
 }
 
-inline BuildingWrapper* isAnyColliding(BuildingWrapper *housesWrapper,  Vector2 point, int houseWidth, int houseHeight) {
+bool addBuilding(QuadNode *node, Vector2 position, enum BuildingType type) {
+
+    // if (!CheckCollisionPointRec(position, *node->coords)) {
+    //     makeNewParent(node, position);
+    // }
+
+    if (isLeaf(node)) {
+        for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
+            if (node->data[i] == NULL) {
+                printf("adding\n");
+                node->data[i] = initBuilding(position.x, position.y, type);
+                return true;
+            }
+        }
+        
+        makeSubdivision(node);
+    } else {
+        enum Quadrant quadrant = findQuadrant(node, position);
+        switch (quadrant) {
+            case NW:
+                break;
+            case NE:
+                break;
+            case SW:
+                break;
+            case SE:
+                break;
+        }
+    }
     return false;
+}
+
+void drawBuildings(QuadNode *node, Vector2 cameraPosition, Textures *textures) {
+    if (isLeaf(node)) {
+        for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
+            if (node->data[i] != NULL) {
+                Building *b = node->data[i];
+                switch (b->type) {
+                    case House:
+                        DrawTextureEx(textures->house, (Vector2){b->x, b->y}, 0, 0.25, WHITE);  
+                        break;
+                    case Lumbermill:
+                        DrawTextureEx(textures->lumbermill, (Vector2){b->x, b->y}, 0, 0.25, WHITE);  
+                        break;
+                    default:
+                        DrawRectangle(b->x, b->y, 24, 24, WHITE);
+                        DrawText("???", b->x, b->y, 20, BLACK);
+                        break;
+                    }
+            } else {
+                return;
+            }
+        }
+    } else {
+        drawBuildings(node->nw, cameraPosition, textures);
+        drawBuildings(node->ne, cameraPosition, textures);
+        drawBuildings(node->sw, cameraPosition, textures);
+        drawBuildings(node->se, cameraPosition, textures);
+    }
 }
