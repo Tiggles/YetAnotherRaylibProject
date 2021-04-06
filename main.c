@@ -114,23 +114,20 @@ void makeSubdivision(QuadNode *node) {
         if (b->y >= node->sw->coords->y) {
             // if bulding is on the right side
             if (b->x >= node->se->coords->x) {
-                printf("se");
                 node->se->data[se++] = b;
             } else {
-                printf("sw");
                 node->sw->data[sw++] = b;
             }
         } else {
             // Node is in upper two quadrants
             if (b->x >= node->ne->coords->x) {
-                printf("ne");
-                node->se->data[ne++] = b;
+                node->ne->data[ne++] = b;
             } else {
-                printf("sw");
-                node->sw->data[nw++] = b;
+                node->nw->data[nw++] = b;
             }
         }
     }
+    free(node->data);
 }
 
 bool isLeaf(QuadNode *node) {
@@ -219,15 +216,15 @@ int main() {
         malloc(sizeof(Building) * MAX_QUAD_NODE_CAPACITY)
     };
 
-    tree.coords->x = screenWidth / 2.0f;
-    tree.coords->y = screenHeight / 2.0f;
-    tree.coords->width = screenWidth / 2.0f;
-    tree.coords->height = screenHeight / 2.0f;
+    tree.coords->x = 0;
+    tree.coords->y = 0;
+    tree.coords->width = screenWidth;
+    tree.coords->height = screenHeight;
     for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
         tree.data[i] = NULL;
     }
 
-    InitWindow(screenWidth, screenHeight, "raylib");
+    InitWindow(screenWidth, screenHeight, "YARP");
 
     Message message;
     message.message = malloc(sizeof(char) * 256);
@@ -403,20 +400,27 @@ bool addBuilding(QuadNode *node, Vector2 position, enum BuildingType type) {
                 return true;
             }
         }
-        
         makeSubdivision(node);
-    } else {
-        enum Quadrant quadrant = findQuadrant(node, position);
-        switch (quadrant) {
-            case NW:
-                break;
-            case NE:
-                break;
-            case SW:
-                break;
-            case SE:
-                break;
-        }
+    } 
+    
+    enum Quadrant quadrant = findQuadrant(node, position);
+    switch (quadrant) {
+        case NW:
+            printf("NW\n");
+            addBuilding(node->nw, position, type);
+            break;
+        case NE:
+            printf("NE\n");
+            addBuilding(node->ne, position, type);
+            break;
+        case SW:
+            printf("SW\n");
+            addBuilding(node->sw, position, type);
+            break;
+        case SE:
+            printf("SE\n");
+            addBuilding(node->se, position, type);
+            break;
     }
     return false;
 }
