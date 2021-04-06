@@ -107,9 +107,12 @@ void makeSubdivision(QuadNode *node) {
     node->sw = initChildNode(node, node->coords->x, node->coords->y + node->coords->height / 2);
     node->se = initChildNode(node, node->coords->x + node->coords->width / 2, node->coords->y + node->coords->height / 2);
     int nw = 0, ne = 0, sw = 0, se = 0;
+
+    int count = 0;
     for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
         struct Building *b = node->data[i];
         if (b == NULL) return;
+        count++;
         // if buildings y position is greater or equal to south nodes
         if (b->y >= node->sw->coords->y) {
             // if bulding is on the right side
@@ -127,6 +130,7 @@ void makeSubdivision(QuadNode *node) {
             }
         }
     }
+    printf("Placed %i \n", count);
     free(node->data);
 }
 
@@ -197,6 +201,7 @@ void input(Camera2D *camera, float delta, Message *message, QuadNode *root, int 
 void update(Message *message, float delta);
 void render(Camera2D *camera, Textures *textures, QuadNode *root, Message *message, enum BuildingType type);
 void freeHouseWrappers(BuildingWrapper *housesWrapper);
+enum Quadrant findQuadrant(QuadNode *node, Vector2 pos);
 
 int wrappersAmount = 0;
 int screenWidth = 800;
@@ -286,6 +291,22 @@ void render(Camera2D *camera, Textures *textures, QuadNode *root, Message *messa
             DrawText(buff, 10, 25, 20, WHITE);
             sprintf(buff, "Type: %i", type);
             DrawText(buff, 10, 40, 20, WHITE);
+            
+            enum Quadrant quadrant = findQuadrant(root, mouse);
+            switch (quadrant) {
+                case NW:
+                    DrawText("NW", mouse.x, mouse.y, 20, WHITE);
+                    break;
+                case NE:
+                    DrawText("NE", mouse.x, mouse.y, 20, WHITE);
+                    break;
+                case SW:
+                    DrawText("SW", mouse.x, mouse.y, 20, WHITE);
+                    break;
+                case SE:
+                    DrawText("SE", mouse.x, mouse.y, 20, WHITE);
+                    break;
+            }
         }
     );
 }
@@ -372,12 +393,11 @@ inline Building* initBuilding(int x, int y, enum BuildingType type) {
 }
 
 enum Quadrant findQuadrant(QuadNode *node, Vector2 pos) {
-    return SE;
     double middleX = node->coords->x + node->coords->width / 2;
     double middleY = node->coords->y + node->coords->height / 2; 
 
     bool isNorth = middleY > pos.y;
-    bool isWest = middleX < pos.x;
+    bool isWest = middleX > pos.x;
 
     if (isNorth) {
         return isWest ? NW : NE;
