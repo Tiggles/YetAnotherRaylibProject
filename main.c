@@ -110,7 +110,7 @@ void makeSubdivision(QuadNode *node) {
 
     int count = 0;
     for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
-        struct Building *b = node->data[i];
+        Building *b = node->data[i];
         if (b == NULL) return;
         count++;
         // if buildings y position is greater or equal to south nodes
@@ -194,19 +194,23 @@ typedef struct BuildingWrapper {
 } BuildingWrapper;
 
 Building* initBuilding(int x, int y, enum BuildingType type);
-bool isRectangleColliding(Rectangle rect1, Rectangle rect2);
 void drawBuildings(QuadNode *root, Vector2 cameraPosition, Textures *textures);
 bool addBuilding(QuadNode *root, Vector2 position, enum BuildingType type);
-void input(Camera2D *camera, float delta, Message *message, QuadNode *root, int houseWidth, int houseHeight, enum BuildingType *type);
+void input(Camera2D *camera, float delta, Message *message, QuadNode *root, enum BuildingType *type);
 void update(Message *message, float delta);
 void render(Camera2D *camera, Textures *textures, QuadNode *root, Message *message, enum BuildingType type);
 void freeHouseWrappers(BuildingWrapper *housesWrapper);
 enum Quadrant findQuadrant(QuadNode *node, Vector2 pos);
+bool isAnyColliding(QuadNode *node, Rectangle box2);
 
 int wrappersAmount = 0;
 int screenWidth = 800;
 int screenHeight = 450;
 int debug = 0;
+int houseHeight = 0;
+int houseWidth = 0;
+int sawmillHeight = 0;
+int sawmillWidth = 0;
 
 int main() {
     enum BuildingType buildingType = House;
@@ -243,15 +247,17 @@ int main() {
 
     Textures textures;
     textures.house = LoadTexture("Assets/house.png");
+    houseHeight = textures.house.height / 4;
+    houseWidth = textures.house.width / 4;
     textures.lumbermill = LoadTexture("Assets/lumbermill_outline.png");
-    int houseHeight = textures.house.height / 4;
-    int houseWidth = textures.house.width / 4;
+    sawmillHeight = textures.lumbermill.height / 4;
+    sawmillWidth = textures.lumbermill.width / 4;
 
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
     while (!WindowShouldClose()) {
         float delta = GetFrameTime();
-        input(&camera, delta, &message, &tree, houseWidth, houseHeight, &buildingType);
+        input(&camera, delta, &message, &tree, &buildingType);
         update(&message, delta);
         render(&camera, &textures, &tree, &message, buildingType);
     }
@@ -311,13 +317,14 @@ void render(Camera2D *camera, Textures *textures, QuadNode *root, Message *messa
     );
 }
 
-void input(Camera2D *camera, float delta, Message *message, QuadNode *root, int houseWidth, int houseHeight, enum BuildingType *type) {
+void input(Camera2D *camera, float delta, Message *message, QuadNode *root, enum BuildingType *type) {
     SetMouseOffset(camera->offset.x, camera->offset.y);
     Vector2 mouse = GetMousePosition();
 
     Vector2 pointerPosition = GetScreenToWorld2D(mouse, *camera);
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
         bool added = addBuilding(root, pointerPosition, *type);
+        printf(added ? "true\n" : "false\n");
         if (!added) {
             message->message = "Cannot place building. Collides with other house.";
             message->timeRemaining = 5;
@@ -413,6 +420,10 @@ bool addBuilding(QuadNode *node, Vector2 position, enum BuildingType type) {
     // }
 
     if (isLeaf(node)) {
+        Rectangle b = {position.x, position.y, type == House  ? houseWidth : sawmillWidth, type == House ? houseHeight : sawmillHeight};
+        if (isAnyColliding(node, b)) return false;
+
+
         for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
             if (node->data[i] == NULL) {
                 printf("adding\n");
@@ -427,22 +438,17 @@ bool addBuilding(QuadNode *node, Vector2 position, enum BuildingType type) {
     switch (quadrant) {
         case NW:
             printf("NW\n");
-            addBuilding(node->nw, position, type);
-            break;
+            return addBuilding(node->nw, position, type);
         case NE:
             printf("NE\n");
-            addBuilding(node->ne, position, type);
-            break;
+            return addBuilding(node->ne, position, type);
         case SW:
             printf("SW\n");
-            addBuilding(node->sw, position, type);
-            break;
+            return addBuilding(node->sw, position, type);
         case SE:
             printf("SE\n");
-            addBuilding(node->se, position, type);
-            break;
+            return addBuilding(node->se, position, type);
     }
-    return false;
 }
 
 void drawBuildings(QuadNode *node, Vector2 cameraPosition, Textures *textures) {
@@ -471,5 +477,26 @@ void drawBuildings(QuadNode *node, Vector2 cameraPosition, Textures *textures) {
         drawBuildings(node->ne, cameraPosition, textures);
         drawBuildings(node->sw, cameraPosition, textures);
         drawBuildings(node->se, cameraPosition, textures);
+    }
+}
+
+bool isAnyColliding(QuadNode *node, Rectangle rectangle) {
+    if (!CheckCollisionRecs(*node->coords, rectangle)) return false;
+    if (isLeaf(node)) {
+        for (int i = 0; i < MAX_QUAD_NODE_CAPACITY; i++) {
+            Building *b = node->data[i];
+            if (b == NULL) return false;
+            enum BuildingType t = b->type;
+            Rectangle rec = { b->x, b->y, t == House  ? houseWidth : sawmillWidth, t == House ? houseHeight : sawmillHeight};
+            if (CheckCollisionRecs(rec, rectangle)) return true;
+        }
+        return false;
+    } else {
+        return (
+            isAnyColliding(node->nw, rectangle) ||
+            isAnyColliding(node->ne, rectangle) ||
+            isAnyColliding(node->sw, rectangle) ||
+            isAnyColliding(node->se, rectangle)
+        );
     }
 }
