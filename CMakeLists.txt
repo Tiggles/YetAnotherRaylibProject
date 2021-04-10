@@ -2,13 +2,15 @@ cmake_minimum_required(VERSION 3.10)
 
 project(game)
 
-find_package(raylib REQUIRED)
-
-set(SOURCE_PREFIX ${CMAKE_CURRENT_LIST_DIR})
-set(GAME_SOURCES 
-    ${SOURCE_PREFIX}/main.c
+# Add you sources to this variable definition
+set(GAME_SOURCES
+    ${CMAKE_CURRENT_LIST_DIR}/main.c
 )
 
 add_executable(${PROJECT_NAME} "")
+
+find_package(raylib CONFIG REQUIRED)
+
 target_sources(${PROJECT_NAME} PUBLIC ${GAME_SOURCES})
-target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
+target_include_directories(${PROJECT_NAME} PRIVATE ${raylib_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${raylib_LIBRARIES})
