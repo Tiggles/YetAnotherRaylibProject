@@ -12,17 +12,17 @@
 
 ### Building with cmake
 
-This project has an CMakeLists.txt setup for generating a plethora of build scripts for build systems
+This project has a CMakeLists.txt setup for generating a plethora of build scripts for build systems
 such as GNU Makefile, Ninja, and NMake (Visual Studio).
 
-Generating the build script with cmake can be done in various ways, but doing the following will
-generate an build script with the default build systems of your platform:
+Generating the build script with CMake can be done in various ways, but doing the following will
+generate a build script with the default build systems of your platform:
 ```
 ## Assuming you are in project root
 $ cmake -S . -B build
 ```
-This will create an directory `build` with the build scripts. You can start the build process with
-cmake:
+This will create a directory `build` with the build scripts. You can start the build process with
+CMake:
 ```
 $ cmake --build ./build/
 ```
