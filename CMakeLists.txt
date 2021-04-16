@@ -20,7 +20,7 @@ add_executable(${PROJECT_NAME} "")
 
 find_package(raylib CONFIG REQUIRED)
 
-target_sources(${PROJECT_NAME} PUBLIC ${GAME_SOURCES})
+target_sources(${PROJECT_NAME} PRIVATE ${GAME_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${raylib_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${raylib_LIBRARIES})
 target_compile_options(${PROJECT_NAME} PRIVATE ${COMPILER_FLAGS})
