@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(game)
+project(game C)
 
 # Add you sources to this variable definition
 set(GAME_SOURCES
@@ -9,10 +9,10 @@ set(GAME_SOURCES
 
 # Compiler flags per compiler, first is clang and gcc, next is MS VC
 set(COMPILER_FLAGS
-   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:
+   $<$<OR:$<C_COMPILER_ID:GNU>,$<C_COMPILER_ID:Clang>,$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:TinyCC>>:
       -Wall -Wextra -O2
    >
-   $<$<CXX_COMPILER_ID:MSVC>:
+   $<$<C_COMPILER_ID:MSVC>:
       /W4 /Ot
    >)
 
