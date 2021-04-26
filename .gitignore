@@ -54,3 +54,5 @@ dkms.conf
 .vscode
 game
 /build/
+cmake-build-debug/
+.idea/
